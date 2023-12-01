@@ -1,9 +1,34 @@
-var JSONParser = /** @class */ (function () {
-    function JSONParser(input) {
-        this.pos = 0;
+type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
+type JSONObject = { [key: string]: JSONValue }
+type JSONArray = JSONValue[];
+
+export class JSONParser {
+    private pos = 0;
+    private input: string;
+
+    constructor(input: string) {
         this.input = input;
     }
-    JSONParser.prototype.parseValue = function () {
+
+    public parse(): JSONValue {
+        this.consumeWhitespace();
+
+        const result = this.parseValue();
+
+        this.consumeWhitespace();
+
+        if (this.hasNext()) {
+            throw new Error(`Unexpected token at position ${this.pos}-${this.currentToken()}`);
+        }
+
+        return result;
+    }
+
+    private currentToken(): string {
+        return this.input.charAt(this.pos);
+    }
+
+    private parseValue(): JSONValue {
         switch (this.currentToken()) {
             case '{':
                 return this.parseObject();
@@ -30,63 +55,64 @@ var JSONParser = /** @class */ (function () {
             case 'n':
                 return this.parseNull();
             default:
-                throw new Error("Invalid JSON value at position ".concat(this.pos));
+                throw new Error(`Invalid JSON value at position ${this.pos}`);
         }
-    };
-    JSONParser.prototype.currentToken = function () {
-        return this.input.charAt(this.pos);
-    };
-    JSONParser.prototype.parse = function () {
-        this.consumeWhitespace();
-        var result = this.parseValue();
-        this.consumeWhitespace();
-        if (this.hasNext()) {
-            throw new Error("Unexpected token at position ".concat(this.pos, "-").concat(this.currentToken()));
-        }
-        return result;
-    };
-    JSONParser.prototype.consumeWhitespace = function () {
+    }
+
+    private consumeWhitespace(): void {
         while (/\s/.test(this.currentToken())) {
             this.consume();
         }
-    };
-    JSONParser.prototype.hasNext = function () {
-        this.consumeWhitespace();
-        return this.currentToken() !== undefined;
-    };
-    JSONParser.prototype.consume = function (expected) {
+    }
+
+    private hasNext(): boolean {
+        return this.currentToken() !== "";
+    }
+
+    private consume(expected?: string): void {
         if (expected && this.currentToken() !== expected) {
-            throw new Error("Expected ".concat(expected, " at position ").concat(this.pos));
+            throw new Error(`Expected ${expected} at position ${this.pos}`);
         }
+
         this.pos++;
-        while (this.currentToken() === " " ||
+
+        while (
+            this.currentToken() === " " ||
             this.currentToken() === "\t" ||
             this.currentToken() === "\n" ||
-            this.currentToken() === "\r") {
+            this.currentToken() === "\r"
+        ) {
             this.pos++;
         }
-    };
-    JSONParser.prototype.optionalConsume = function (expected) {
+    }
+
+    private optionalConsume(expected: string): boolean {
         if (this.currentToken() === expected) {
             this.pos++;
             // Skip over any whitespace characters
-            while (this.currentToken() === " " ||
+            while (
+                this.currentToken() === " " ||
                 this.currentToken() === "\t" ||
                 this.currentToken() === "\n" ||
-                this.currentToken() === "\r") {
+                this.currentToken() === "\r"
+            ) {
                 this.pos++;
             }
+
             return true;
         }
+
         return false;
-    };
-    JSONParser.prototype.parseEscape = function () {
+    }
+
+    private parseEscape(): string {
         this.consume();
+
         switch (this.currentToken()) {
             case '"':
             case '\\':
             case '/':
-                var c = this.currentToken();
+                const c = this.currentToken();
                 this.consume();
                 return c;
             case 'b':
@@ -106,132 +132,165 @@ var JSONParser = /** @class */ (function () {
                 return '\t';
             case 'u':
                 this.consume();
-                var code = parseInt(this.input.substring(this.pos, 4), 16);
+                const code = parseInt(this.input.substring(this.pos, 4), 16);
+
                 if (isNaN(code)) {
-                    throw new Error("Invalid Unicode escape sequence at position ".concat(this.pos));
+                    throw new Error(`Invalid Unicode escape sequence at position ${this.pos}`);
                 }
+
                 this.pos += 4;
+
                 return String.fromCharCode(code);
             default:
-                throw new Error("Invalid escape sequence at position ".concat(this.pos));
+                throw new Error(`Invalid escape sequence at position ${this.pos}`);
         }
-    };
-    JSONParser.prototype.parseString = function () {
-        var str = '';
+    }
+
+    private parseString(): string {
+        let str = '';
+
         this.consume('"');
+
         while (this.currentToken() !== '"') {
             if (this.currentToken() === '\\') {
                 str += this.parseEscape();
-            }
-            else {
+            } else {
                 str += this.currentToken();
                 this.pos++;
             }
         }
+
         this.consume('"');
+
         return str;
-    };
-    JSONParser.prototype.parsePair = function () {
-        var key = this.parseString();
+    }
+
+    private parsePair(): { key: string, value: JSONValue } {
+        const key = this.parseString();
+
         this.consume(':');
-        var value = this.parseValue();
-        return { key: key, value: value };
-    };
-    JSONParser.prototype.parseObject = function () {
-        var obj = {};
+
+        const value = this.parseValue();
+
+        return { key, value };
+    }
+
+    private parseObject(): JSONObject {
+        const obj: JSONObject = {};
+
         this.consume("{");
+
         while (this.currentToken() !== "}") {
-            var pair = this.parsePair();
+            const pair = this.parsePair();
             obj[pair.key] = pair.value;
+
             if (this.currentToken() === ",") {
                 this.consume(",");
-            }
-            else if (this.currentToken() !== "}") {
-                throw new Error("Invalid object at position ".concat(this.pos));
+            } else if (this.currentToken() !== "}") {
+                throw new Error(`Invalid object at position ${this.pos}`);
             }
         }
+
         this.consume("}");
+
         return obj;
-    };
-    JSONParser.prototype.parseDigits = function () {
-        var str = '';
+    }
+
+    private parseDigits(): string {
+        let str = '';
+
         if (this.currentToken() === '0') {
             str += this.currentToken();
             this.consume();
-        }
-        else if (this.currentToken() >= '1' && this.currentToken() <= '9') {
+        } else if (this.currentToken() >= '1' && this.currentToken() <= '9') {
             str += this.currentToken();
             this.consume();
+
             while (this.currentToken() >= '0' && this.currentToken() <= '9') {
                 str += this.currentToken();
                 this.consume();
             }
+        } else {
+            throw new Error(`Invalid JSON number at position ${this.pos}`);
         }
-        else {
-            throw new Error("Invalid JSON number at position ".concat(this.pos));
-        }
+
         return str;
-    };
-    JSONParser.prototype.parseNumber = function () {
-        var str = '';
+    }
+
+    private parseNumber(): number {
+        let str = '';
+
         if (this.currentToken() === '-') {
             str += '-';
             this.consume('-');
         }
+
         str += this.parseDigits();
+
         if (this.currentToken() === '.') {
             str += '.';
             this.consume('.');
             str += this.parseDigits();
         }
+
         if (this.currentToken() === 'e' || this.currentToken() === 'E') {
             str += this.currentToken();
             this.consume();
+
             if (this.currentToken() === '+' || this.currentToken() === '-') {
                 str += this.currentToken();
                 this.consume();
             }
+
             str += this.parseDigits();
         }
+
         return parseFloat(str);
-    };
-    JSONParser.prototype.parseArray = function () {
-        var arr = [];
+    }
+
+    private parseArray(): JSONArray {
+        const arr: JSONArray = [];
+
         this.consume("[");
+
         while (this.currentToken() !== "]") {
-            var value = this.parseValue();
+            const value = this.parseValue();
             arr.push(value);
+
             if (this.currentToken() === ",") {
                 this.consume(",");
-            }
-            else if (this.currentToken() !== "]") {
-                throw new Error("Invalid array at position ".concat(this.pos));
+            } else if (this.currentToken() !== "]") {
+                throw new Error(`Invalid array at position ${this.pos}`);
             }
         }
+
         this.consume("]");
+
         return arr;
-    };
-    JSONParser.prototype.parseTrue = function () {
+    }
+
+    private parseTrue(): true {
         this.consume('t');
         this.consume('r');
         this.consume('u');
         this.consume('e');
         return true;
-    };
-    JSONParser.prototype.parseFalse = function () {
+    }
+
+    private parseFalse(): false {
         this.consume('f');
         this.consume('a');
         this.consume('l');
         this.consume('s');
         this.consume('e');
         return false;
-    };
-    JSONParser.prototype.parseNull = function () {
+    }
+
+    private parseNull(): null {
         this.consume('n');
         this.consume('u');
         this.consume('l');
         this.consume('l');
         return null;
-    };
-    return JSONParser;
-}());
+    }
+}
