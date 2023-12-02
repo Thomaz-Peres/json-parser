@@ -13,6 +13,8 @@ export class JSONParser {
     public parse(): JSONValue {
         this.consumeWhitespace();
 
+        console.log(this.input);
+
         const result = this.parseValue();
 
         this.consumeWhitespace();
@@ -109,27 +111,34 @@ export class JSONParser {
         this.consume();
 
         switch (this.currentToken()) {
+            // If the escape sequence is a double quote, backslash, or forward slash, return the corresponding character
             case '"':
             case '\\':
             case '/':
                 const c = this.currentToken();
                 this.consume();
                 return c;
+            // If the escape sequence is a backspace, return the corresponding character
             case 'b':
                 this.consume();
                 return '\b';
+            // If the escape sequence is a form feed, return the corresponding character
             case 'f':
                 this.consume();
                 return '\f';
+            // If the escape sequence is a newline, return the corresponding character
             case 'n':
                 this.consume();
                 return '\n';
+            // If the escape sequence is a carriage return, return the corresponding character
             case 'r':
                 this.consume();
                 return '\r';
+            // If the escape sequence is a tab, return the corresponding character
             case 't':
                 this.consume();
                 return '\t';
+            // If the escape sequence is a Unicode code point, parse it and return the corresponding character
             case 'u':
                 this.consume();
                 const code = parseInt(this.input.substring(this.pos, 4), 16);

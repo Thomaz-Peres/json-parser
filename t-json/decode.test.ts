@@ -1,4 +1,4 @@
-import { JSONParser } from "./parse"
+import { JSONParser } from "./decode"
 
 describe("JSONParser", () => {
     describe("parser()", () => {
@@ -14,11 +14,12 @@ describe("JSONParser", () => {
         });
 
         test("test an object with string", () => {
-            const input = '{"Name": "Thomaz", "age": "20"}';
+            const input = '{\"Name\": \"Thomaz\", \"age\": \"20\"}';
             const expectedOutput = { Name: "Thomaz", age: "20" };
             const parser = new JSONParser(input);
 
             const output = parser.parse();
+            console.log(output);
 
             expect(output).toEqual(expectedOutput);
         });
@@ -39,6 +40,17 @@ describe("JSONParser", () => {
             const parser = new JSONParser(input);
 
             const output = parser.parse();
+
+            expect(output).toEqual(expectedOutput);
+        });
+
+        test("test an object array", () => {
+            const input = '{"True": [false, true], "False": true, "Null": null}';
+            const expectedOutput = { True: [false, true], False: true, Null: null };
+            const parser = new JSONParser(input);
+
+            const output = parser.parse();
+            console.log(output);
 
             expect(output).toEqual(expectedOutput);
         })
