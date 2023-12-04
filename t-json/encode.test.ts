@@ -3,7 +3,7 @@ import { Encoder } from "./encode"
 describe("Encode", () => {
 
     test("test encode object with object and array", () => {
-        const expectedOutput = '{"name":"Reader","age":5,"arr":["arr1","arr2"],"obj":{"Heig":15,"Surname":"Teste",}';
+        const expectedOutput = '{"name":"Reader","age":5,"arr":["arr1","arr2"],"obj":{"Heig":15,"Surname":"Teste"}}';
         const input = {
             name: "Reader",
             age: 5,
@@ -17,10 +17,11 @@ describe("Encode", () => {
     });
 
     test("test encode simple object", () => {
-        const expectedOutput = '{"name":"Reader","age":5}';
+        const expectedOutput = '{"name":"Reader","age":5,"True":true}';
         const input = {
             name: "Reader",
             age: 5,
+            True: true
         };
 
         const output = new Encoder().encode(input);

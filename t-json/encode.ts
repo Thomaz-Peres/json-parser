@@ -33,18 +33,16 @@ export class Encoder {
         let obj = '{';
 
         let i = 0;
+        const objLen = Object.keys(input);
         for (let val in input) {
-            obj += `"${val}":`;
-            obj += this.encodeValue(input[val]);
+            const value = this.encodeValue(input[val]);
 
-            if (Array.isArray(input[val])) {
-                obj += ',';
-                continue;
-            }
-
+            const pair = `"${val}":${value}`;
+            console.log(objLen);
+            obj += pair;
             i++
 
-            if (i < input[val].length - 1) {
+            if (i < objLen.length) {
                 obj += ',';
             } else {
                 obj += '}';
